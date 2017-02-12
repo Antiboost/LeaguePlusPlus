@@ -120,13 +120,13 @@ void Mixed()
 				Q->CastOnTarget(target, kHitChanceHigh);
 			}
 
-	if (HarassW->Enabled())
-		if (W->IsReady())
-		{
-			auto target = GTargetSelector->FindTarget(QuickestKill, SpellDamage, W->Range());
-			W->CastOnTarget(target);
-		}
-}
+		if (HarassW->Enabled())
+			if (W->IsReady())
+			{
+				auto target = GTargetSelector->FindTarget(QuickestKill, SpellDamage, W->Range());
+				W->CastOnTarget(target);
+			}
+}	
 
 void UltLogic()
 {
@@ -134,7 +134,7 @@ void UltLogic()
 	{
 		for (auto enemy : GEntityList->GetAllHeros(false, true))
 		{
-			if (enemy == nullptr || !enemy->IsValidTarget(myHero, R->Range()) || enemy->IsInvulnerable())
+			if (enemy == nullptr || !enemy->IsValidTarget(myHero, R->Range()) || enemy->IsInvulnerable() || enemy->IsDead())
 				return;
 			auto damage = GHealthPrediction->GetKSDamage(enemy, kSlotR, R->GetDelay(), false);
 			if (damage > enemy->GetHealth())
@@ -161,7 +161,7 @@ void Misc()
 	{
 		for (auto enemy : GEntityList->GetAllHeros(false, true))
 		{
-		if (enemy == nullptr || !enemy->IsValidTarget(myHero, W->Range()) || enemy->IsInvulnerable())
+		if (enemy == nullptr || !enemy->IsValidTarget(myHero, W->Range()) || enemy->IsInvulnerable() || enemy->IsDead())
 			return;
 		auto damage = GHealthPrediction->GetKSDamage(enemy, kSlotW	, W->GetDelay(), false);
 		if (damage > enemy->GetHealth())
