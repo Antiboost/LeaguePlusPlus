@@ -86,8 +86,6 @@ void InitializeSpells()
 
 IUnit* myHero;
 
-bool PressingUltKey = false;
-
 void Combo()
 {
 	if (ComboQ->Enabled())
@@ -128,20 +126,27 @@ void Mixed()
 			}
 }	
 
+
 void UltLogic()
 {
-	if (R->IsReady() && KSWithUlt->Enabled())
+	for (auto enemy : GEntityList->GetAllHeros(false, true))
+	if (KSWithUlt->Enabled() && R->IsReady())
 	{
-		for (auto enemy : GEntityList->GetAllHeros(false, true))
+		if (enemy->IsEnemy(GEntityList->Player()) && GEntityList->Player()->IsValidTarget(enemy, R->Range()))
 		{
-			if (enemy == nullptr || !enemy->IsValidTarget(myHero, R->Range()) || enemy->IsInvulnerable() || enemy->IsDead())
-				return;
-			auto damage = GHealthPrediction->GetKSDamage(enemy, kSlotR, R->GetDelay(), false);
-			if (damage > enemy->GetHealth())
+			auto BaseDamage = ((GEntityList->Player()->GetSpellLevel(kSlotR) - 1) * 150) + 215;
+			auto BonusDamage = (1.5 * GEntityList->Player()->BonusDamage());
+			auto UltDamage = BaseDamage + BonusDamage;
+
+			if (enemy->GetHealth() < UltDamage)
+			{
 				R->CastOnTarget(enemy);
+			}
+
 		}
 	}
 }
+
 
 void Misc()
 {
@@ -161,13 +166,12 @@ void Misc()
 	{
 		for (auto enemy : GEntityList->GetAllHeros(false, true))
 		{
-		if (enemy == nullptr || !enemy->IsValidTarget(myHero, W->Range()) || enemy->IsInvulnerable() || enemy->IsDead())
-			return;
-		auto damage = GHealthPrediction->GetKSDamage(enemy, kSlotW	, W->GetDelay(), false);
-		if (damage > enemy->GetHealth())
-			W->CastOnTarget(enemy);
+			if (enemy == nullptr || !enemy->IsValidTarget(myHero, W->Range()) || enemy->IsInvulnerable() || enemy->IsDead())
+				return;
+			auto damage = GHealthPrediction->GetKSDamage(enemy, kSlotW, W->GetDelay(), false);
+			if (damage > enemy->GetHealth())
+				W->CastOnTarget(enemy);
 		}
-
 	}
 }
 
