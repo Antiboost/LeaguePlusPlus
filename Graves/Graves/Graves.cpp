@@ -7,11 +7,13 @@ IMenu* MainMenu;
 
 IMenu* ComboMenu;
 IMenuOption* ComboQ;
+IMenuOption* ComboQRange;
 IMenuOption* ComboW;
 IMenuOption* ComboE;
 
 IMenu* HarassMenu;
 IMenuOption* HarassQ;
+IMenuOption* HarassQRange;
 IMenuOption* HarassW;
 IMenuOption* HarassE;
 IMenuOption* HarassMana;
@@ -21,7 +23,7 @@ IMenuOption* JungleE;
 IMenuOption* JungleMana;
 
 IMenu* UltMenu;
-// IMenuOption* UltOnKey;
+IMenuOption* UltOnKey;
 IMenuOption* KSWithUlt;
 // IMenuOption* KSWithUltToggle;
 
@@ -37,6 +39,7 @@ void InitializeMenu()
 	ComboMenu = MainMenu->AddMenu("Combo Settngs");
 	{
 		ComboQ = ComboMenu->CheckBox("Use Q", true);
+		ComboQRange = ComboMenu->AddInteger("Q Range", 0, 808, 750);
 		ComboW = ComboMenu->CheckBox("Use W", true);
 		ComboE = ComboMenu->CheckBox("Use E", true);
 	}
@@ -44,6 +47,7 @@ void InitializeMenu()
 	HarassMenu = MainMenu->AddMenu("Harass Settings");
 	{
 		HarassQ = HarassMenu->CheckBox("Use Q", false);
+		HarassQRange = HarassMenu->AddInteger("Q Range", 0, 808, 750);
 		HarassW = HarassMenu->CheckBox("Use W", false);
 		HarassE = HarassMenu->CheckBox("Use E", true);
 		HarassMana = HarassMenu->AddInteger("Mana Percent for Harass", 1, 100, 20);
@@ -57,18 +61,18 @@ void InitializeMenu()
 
 	UltMenu = MainMenu->AddMenu("Ult Settings");
 	{
-	//	UltOnKey = UltMenu->AddKey
+		UltOnKey = UltMenu->AddKey("Ult on Key", 'T');
 		KSWithUlt = UltMenu->CheckBox("KS with R", true);
-	//	KSWithUltToggle
+		//	KSWithUltToggle
 	}
 
-MiscMenu = MainMenu->AddMenu("Misc Settings");
-{
-	WOnCC = MiscMenu->CheckBox("Cast W on Crowd Controled Targets", true);
-	WOnGapclose = MiscMenu->CheckBox("Cast W on Gap Closers", true);
-	KSWithW = MiscMenu->CheckBox("KS with W", true);
-	// EOnGapclose = MiscMenu->CheckBox("Cast E on Gap Closers");
-}
+	MiscMenu = MainMenu->AddMenu("Misc Settings");
+	{
+		WOnCC = MiscMenu->CheckBox("Cast W on Crowd Controled Targets", true);
+		WOnGapclose = MiscMenu->CheckBox("Cast W on Gap Closers", true);
+		KSWithW = MiscMenu->CheckBox("KS with W", true);
+		// EOnGapclose = MiscMenu->CheckBox("Cast E on Gap Closers");
+	}
 }
 
 ISpell2* Q;
@@ -81,7 +85,7 @@ void InitializeSpells()
 	Q = SimpleLib::SimpleLib::LoadSkillshot('Q', 0.25, 808, 3000, 40, kLineCast, true, true, static_cast<eCollisionFlags>(kCollidesWithWalls | kCollidesWithYasuoWall));
 	W = GPluginSDK->CreateSpell2(kSlotW, kCircleCast, false, true, static_cast<eCollisionFlags>(kCollidesWithNothing));
 	E = GPluginSDK->CreateSpell2(kSlotE, kTargetCast, false, false, kCollidesWithNothing);
-	R = GPluginSDK->CreateSpell2(kSlotR, kTargetCast, true, false, static_cast<eCollisionFlags>(kCollidesWithYasuoWall));
+	R = SimpleLib::SimpleLib::LoadSkillshot('R', 0.25, 1100, 2100, 100, kLineCast, true, false, static_cast<eCollisionFlags>(kCollidesWithYasuoWall));
 }
 
 IUnit* myHero;
@@ -92,7 +96,7 @@ void Combo()
 	{
 		if (Q->IsReady())
 		{
-			auto target = GTargetSelector->FindTarget(QuickestKill, PhysicalDamage, Q->Range());
+			auto target = GTargetSelector->FindTarget(QuickestKill, PhysicalDamage, ComboQRange->GetInteger());
 			Q->CastOnTarget(target, kHitChanceHigh);
 		}
 	}
@@ -114,37 +118,37 @@ void Mixed()
 		if (HarassQ->Enabled())
 			if (Q->IsReady())
 			{
-				auto target = GTargetSelector->FindTarget(QuickestKill, PhysicalDamage, Q->Range());
+				auto target = GTargetSelector->FindTarget(QuickestKill, PhysicalDamage, HarassQRange->GetInteger());
 				Q->CastOnTarget(target, kHitChanceHigh);
 			}
 
-		if (HarassW->Enabled())
-			if (W->IsReady())
-			{
-				auto target = GTargetSelector->FindTarget(QuickestKill, SpellDamage, W->Range());
-				W->CastOnTarget(target);
-			}
-}	
+	if (HarassW->Enabled())
+		if (W->IsReady())
+		{
+			auto target = GTargetSelector->FindTarget(QuickestKill, SpellDamage, W->Range());
+			W->CastOnTarget(target);
+		}
+}
 
 
 void UltLogic()
 {
 	for (auto enemy : GEntityList->GetAllHeros(false, true))
-	if (KSWithUlt->Enabled() && R->IsReady())
-	{
-		if (enemy->IsEnemy(GEntityList->Player()) && GEntityList->Player()->IsValidTarget(enemy, R->Range()))
+		if (KSWithUlt->Enabled() && R->IsReady())
 		{
-			auto BaseDamage = ((GEntityList->Player()->GetSpellLevel(kSlotR) - 1) * 150) + 215;
-			auto BonusDamage = (1.5 * GEntityList->Player()->BonusDamage());
-			auto UltDamage = BaseDamage + BonusDamage;
-
-			if (enemy->GetHealth() < UltDamage)
+			if (enemy->IsEnemy(GEntityList->Player()) && GEntityList->Player()->IsValidTarget(enemy, R->Range()))
 			{
-				R->CastOnTarget(enemy);
-			}
+				auto BaseDamage = ((GEntityList->Player()->GetSpellLevel(kSlotR) - 1) * 150) + 215;
+				auto BonusDamage = (1.5 * GEntityList->Player()->BonusDamage());
+				auto UltDamage = BaseDamage + BonusDamage;
 
+				if (enemy->GetHealth() < UltDamage)
+				{
+					R->CastOnTarget(enemy);
+				}
+
+			}
 		}
-	}
 }
 
 
@@ -189,11 +193,21 @@ PLUGIN_EVENT(void) OnGameUpdate()
 		break;
 	default:;
 	}
+
+	if (GetAsyncKeyState(UltOnKey->GetInteger()) && R->IsReady())
+	{
+		auto target = GTargetSelector->FindTarget(QuickestKill, PhysicalDamage, R->Range());
+		if (target != nullptr && myHero->IsValidTarget(target, R->Range()))
+		{
+			R->CastOnTarget(target);
+		}
+	}
+
 }
 
 PLUGIN_EVENT(void) OnGapcloser(GapCloserSpell const& args)
 {
-	if  (args.Sender->IsEnemy(myHero) && args.Sender->IsHero())
+	if (args.Sender->IsEnemy(myHero) && args.Sender->IsHero())
 	{
 		if (WOnGapclose->Enabled() && W->IsReady() && !args.IsTargeted && SimpleLib::SimpleLib::GetDistanceVectors(myHero->GetPosition(), args.EndPosition) < W->Range())
 		{
