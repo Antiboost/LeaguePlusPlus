@@ -82,10 +82,17 @@ ISpell2* R;
 
 void InitializeSpells()
 {
-	Q = SimpleLib::SimpleLib::LoadSkillshot('Q', 0.25, 808, 3000, 40, kLineCast, true, true, static_cast<eCollisionFlags>(kCollidesWithWalls | kCollidesWithYasuoWall));
-	W = GPluginSDK->CreateSpell2(kSlotW, kCircleCast, false, true, static_cast<eCollisionFlags>(kCollidesWithNothing));
-	E = GPluginSDK->CreateSpell2(kSlotE, kTargetCast, false, false, kCollidesWithNothing);
-	R = SimpleLib::SimpleLib::LoadSkillshot('R', 0.25, 1100, 2100, 100, kLineCast, true, false, static_cast<eCollisionFlags>(kCollidesWithYasuoWall));
+	Q = GPluginSDK->CreateSpell2(kSlotQ, kLineCast, true, true, (kCollidesWithYasuoWall));
+	Q->SetSkillshot(0.25f, 60.f, 3000.f, 825.f);
+
+	W = GPluginSDK->CreateSpell2(kSlotW, kCircleCast, true, true, (kCollidesWithNothing));
+	W->SetSkillshot(0.35f, 250.f, 1000.f, 950.f);
+
+	E = GPluginSDK->CreateSpell2(kSlotE, kCircleCast, false, false, (kCollidesWithNothing));
+	E->SetSkillshot(0, 100.f, 1000.f, 425.f);
+
+	R = GPluginSDK->CreateSpell2(kSlotR, kLineCast, true, true, (kCollidesWithYasuoWall));
+	R->SetSkillshot(0.25f, 100.f, 2100.f, 1100.f);
 }
 
 IUnit* myHero;
@@ -138,11 +145,9 @@ void UltLogic()
 		{
 			if (enemy->IsEnemy(GEntityList->Player()) && GEntityList->Player()->IsValidTarget(enemy, R->Range()))
 			{
-				auto BaseDamage = ((GEntityList->Player()->GetSpellLevel(kSlotR) - 1) * 150) + 215;
-				auto BonusDamage = (1.5 * GEntityList->Player()->BonusDamage());
-				auto UltDamage = BaseDamage + BonusDamage;
-
-				if (enemy->GetHealth() < UltDamage)
+				auto BaseDamage = ((GEntityList->Player()->GetSpellLevel(kSlotR) - 1) * 150) + 250 + (1.5 * GEntityList->Player()->BonusDamage());
+				auto RealDamage = GDamage->CalcPhysicalDamage(myHero, enemy, BaseDamage);
+				if (enemy->GetHealth() <= RealDamage)
 				{
 					R->CastOnTarget(enemy);
 				}
@@ -207,11 +212,12 @@ PLUGIN_EVENT(void) OnGameUpdate()
 
 PLUGIN_EVENT(void) OnGapcloser(GapCloserSpell const& args)
 {
-	if (args.Sender->IsEnemy(myHero) && args.Sender->IsHero())
+	auto target = GTargetSelector->FindTarget(QuickestKill, SpellDamage, W->Range());
+	if (target->IsEnemy(myHero) && target->IsHero())
 	{
 		if (WOnGapclose->Enabled() && W->IsReady() && !args.IsTargeted && SimpleLib::SimpleLib::GetDistanceVectors(myHero->GetPosition(), args.EndPosition) < W->Range())
 		{
-			W->CastOnTarget(args.Sender);
+			W->CastOnTarget(target, 5);
 		}
 	}
 }
@@ -263,6 +269,5 @@ PLUGIN_API void OnUnload()
 	MainMenu->Remove();
 	GEventManager->RemoveEventHandler(kEventOnGameUpdate, OnGameUpdate);
 	GEventManager->RemoveEventHandler(kEventOnGapCloser, OnGapcloser);
-	GEventManager->RemoveEventHandler(kEventOnGapCloser, OnAttack);
+	GEventManager->RemoveEventHandler(kEventOrbwalkOnAttack, OnAttack);
 }
-
